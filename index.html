@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MatchMe Pro - Final</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        :root { --primary: #ff4b6a; --bg: #f3f3f3; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: var(--bg); height: 100vh; display: flex; justify-content: center; overflow: hidden; }
+        
+        #app { width: 100%; max-width: 420px; background: white; height: 100%; position: relative; display: flex; flex-direction: column; }
+
+        /* NOTIFICATION TOAST (NEW) */
+        #toast-box {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #333; color: white; padding: 12px 20px; border-radius: 30px;
+            font-size: 0.9rem; z-index: 1000; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            white-space: nowrap; transition: top 0.5s;
+        }
+        .toast-success { background: #25d366 !important; }
+        .toast-error { background: #ff4b6a !important; }
+
+        /* VIEWS */
+        .view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; display: none; flex-direction: column; z-index: 10; overflow-y: auto; padding-bottom: 70px;}
+        .view.active { display: flex; }
+
+        /* AUTH SCREEN */
+        .auth-box { padding: 40px; display: flex; flex-direction: column; justify-content: center; height: 100%; text-align: center; }
+        .input-field { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        .btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 30px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s;}
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+
+        /* PHOTO SLIDER & CARDS */
+        .card-stack { flex: 1; padding: 15px; display: flex; justify-content: center; align-items: center; }
+        .profile-card { width: 100%; height: 100%; max-height: 550px; border-radius: 20px; overflow: hidden; position: relative; background: #000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .carousel { width: 100%; height: 100%; position: relative; }
+        .carousel-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .carousel-img.active { display: block; }
+        .blur-img { filter: blur(15px); transform: scale(1.1); } 
+        .card-overlay { position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color: white; padding: 20px 20px 80px 20px; pointer-events: none;}
+        .slider-dots { position: absolute; top: 15px; width: 100%; display: flex; justify-content: center; gap: 5px; z-index: 20; }
+        .dot { width: 30px; height: 4px; background: rgba(255,255,255,0.5); border-radius: 2px; }
+        .dot.active { background: white; }
+        .tap-area { position: absolute; top: 0; height: 100%; width: 50%; z-index: 15; cursor: pointer; }
+        .tap-left { left: 0; } .tap-right { right: 0; }
+        .actions { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 30; }
+        .act-btn { width: 60px; height: 60px; border-radius: 50%; border: none; font-size: 1.5rem; cursor: pointer; background: white; display: flex; justify-content: center; align-items: center; box-shadow: 0 5px 10px rgba(0,0,0,0.1);}
+        .btn-no { color: #ff4b6a; } .btn-yes { color: #25d366; }
+
+        /* UPLOAD GRID */
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .photo-slot { aspect-ratio: 1; background: #eee; border-radius: 10px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 2px dashed #ccc;}
+        .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+        .remove-photo { position: absolute; top: 2px; right: 2px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; font-size: 12px; line-height: 20px; z-index: 5; }
+
+        /* CHAT & NAV */
+        .chat-list-item { padding: 15px; display: flex; align-items: center; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px; }
+        .nav { position: absolute; bottom: 0; width: 100%; height: 60px; background: white; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; z-index: 50; }
+        .nav-item { font-size: 1.4rem; color: #ccc; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        .header { height: 60px; display: flex; align-items: center; justify-content: center; font-weight: 600; border-bottom: 1px solid #eee; }
+        
+        /* CHAT WINDOW */
+        #view-chat-window { z-index: 100; padding: 0; background: #fff;}
+        .messages { flex: 1; padding: 15px; overflow-y: auto; background: #fafafa; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 8px 14px; border-radius: 16px; max-width: 75%; font-size: 0.9rem; }
+        .msg-me { align-self: flex-end; background: var(--primary); color: white; }
+        .msg-them { align-self: flex-start; background: white; border: 1px solid #eee; }
+        .input-area { padding: 10px; border-top: 1px solid #eee; display: flex; background: white;}
+
+        .loading-text { color: #888; text-align: center; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="toast-box">Notification</div>
+
+    <div id="view-auth" class="view active" style="z-index: 200;">
+        <div class="auth-box">
+            <h1 style="color: var(--primary); margin-bottom: 10px;">MatchMe</h1>
+            <p id="auth-sub" style="color: #666; margin-bottom: 30px;">Login to find matches</p>
+            
+            <input type="email" id="email" class="input-field" placeholder="Email Address">
+            <input type="password" id="password" class="input-field" placeholder="Password">
+            
+            <button class="btn" id="btn-action" onclick="handleAuthAction()">Login</button>
+            <button class="btn btn-outline" style="margin-top: 10px;" onclick="toggleAuth()">Create New Account</button>
+            
+            <p style="font-size: 0.7rem; color: #aaa; margin-top: 30px;">Dev: admin@test.com</p>
+        </div>
+    </div>
+
+    <div id="view-setup" class="view">
+        <div class="header">Edit Profile</div>
+        <div style="padding: 20px;">
+            <p style="margin-bottom: 10px; font-size: 0.9rem; color: #666;">Add up to 4 Photos</p>
+            <div class="photo-grid" id="photo-grid"></div>
+            <input type="file" id="file-input" hidden accept="image/*" onchange="handleFileSelect(event)">
+            <input type="text" id="setup-name" class="input-field" placeholder="Full Name">
+            <input type="text" id="setup-city" class="input-field" placeholder="City (e.g. Delhi)">
+            
+            <div style="display:flex; justify-content:space-between; margin: 10px 0; padding:10px; background:#f9f9f9; border-radius:10px;">
+                <span>Blur Photos</span> <input type="checkbox" id="setup-blur">
+            </div>
+            <button class="btn" onclick="saveProfile()">Save Profile</button>
+        </div>
+    </div>
+
+    <div id="view-home" class="view" style="padding: 0;">
+        <div class="card-stack" id="card-area"><div class="loading-text">Loading...</div></div>
+    </div>
+
+    <div id="view-chats" class="view">
+        <div class="header">Messages</div>
+        <div id="chat-list-container"><div class="loading-text">Loading...</div></div>
+    </div>
+
+    <div id="view-profile" class="view">
+        <div class="header">My Profile</div>
+        <div style="padding: 20px; text-align: center;">
+            <img id="my-main-pic" src="" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid var(--primary);">
+            <h2 id="my-name-display">User</h2>
+            <p id="my-city-display" style="color: #666;">City</p>
+            <button class="btn btn-outline" onclick="loadSetupData()">Edit Profile</button>
+            <button class="btn" style="background: #333; margin-top: 10px;" onclick="doLogout()">Logout</button>
+            <div id="dev-area" style="display: none; margin-top: 20px;">
+                <button class="btn" style="background: #555;" onclick="generateFakeUsers()">+ Fake Users</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-chat-window" class="view">
+        <div class="header" style="justify-content: flex-start; padding: 0 15px;">
+            <i class="fas fa-arrow-left" onclick="showView('view-chats')" style="font-size: 1.2rem; cursor: pointer; padding: 10px;"></i>
+            <span id="chat-header-name" style="margin-left:15px;">User</span>
+        </div>
+        <div class="messages" id="msg-container"></div>
+        <div class="input-area">
+            <input type="text" id="msg-input" class="input-field" style="margin: 0; border-radius: 20px;" placeholder="Type...">
+            <button class="btn" style="width: 50px; border-radius: 50%; margin-left: 10px;" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <div class="nav" id="navbar" style="display: none;">
+        <div class="nav-item active" onclick="navTo('home')"><i class="fas fa-fire"></i></div>
+        <div class="nav-item" onclick="navTo('chats')"><i class="fas fa-comment-alt"></i></div>
+        <div class="nav-item" onclick="navTo('profile')"><i class="fas fa-user"></i></div>
+    </div>
+</div>
+
+<script>
+    // --- CONFIG ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyAoyQulYeas2xQWVgGg-L81jkCTU7aAozA",
+      authDomain: "tinder-ce3a1.firebaseapp.com",
+      databaseURL: "https://tinder-ce3a1-default-rtdb.firebaseio.com",
+      projectId: "tinder-ce3a1",
+      storageBucket: "tinder-ce3a1.firebasestorage.app",
+      messagingSenderId: "832688331776",
+      appId: "1:832688331776:web:0c78bf232fc9e10ce4cce5"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser = null;
+    let myProfile = null;
+    let isSignup = false;
+    let uploadPhotos = [];
+    let currentChatId = null;
+
+    // --- NOTIFICATION SYSTEM (TOAST) ---
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast-box');
+        t.innerText = msg;
+        t.className = type === 'error' ? 'toast-error' : 'toast-success';
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
+    // --- AUTH LOGIC ---
+    // This runs automatically when login/signup is successful
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            currentUser = user;
+            // Check if profile exists
+            const doc = await db.collection('users').doc(user.uid).get();
+            if (doc.exists) {
+                myProfile = doc.data();
+                showToast("Welcome back!", "success");
+                initApp();
+            } else {
+                // ACCOUNT CREATED -> AUTO REDIRECT TO SETUP
+                showToast("Account Created! Please setup profile.", "success");
+                document.getElementById('view-auth').classList.remove('active');
+                loadSetupData(); 
+            }
+        } else {
+            showView('view-auth');
+            document.getElementById('navbar').style.display = 'none';
+        }
+    });
+
+    function toggleAuth() {
+        isSignup = !isSignup;
+        document.getElementById('auth-sub').innerText = isSignup ? "Create an account" : "Login to find matches";
+        const btn = document.getElementById('btn-action');
+        btn.innerText = isSignup ? "Sign Up" : "Login";
+        // Reset inputs
+        document.getElementById('email').value = "";
+        document.getElementById('password').value = "";
+    }
+
+    function handleAuthAction() {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+        const btn = document.getElementById('btn-action');
+        
+        if(!email || !pass) return showToast("Please fill all fields", "error");
+
+        // Loading State
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+
+        if(isSignup) {
+            auth.createUserWithEmailAndPassword(email, pass)
+                .then(() => {
+                    // Success is handled by onAuthStateChanged
+                    btn.innerText = "Sign Up"; btn.disabled = false;
+                })
+                .catch(e => {
+                    showToast(e.message, "error"); // Show specific firebase error
+                    btn.innerText = "Sign Up"; btn.disabled = false;
+                });
+        } else {
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(() => {
+                    // Success handled by onAuthStateChanged
+                    btn.innerText = "Login"; btn.disabled = false;
+                })
+                .catch(e => {
+                    showToast("Login Failed: " + e.message, "error");
+                    btn.innerText = "Login"; btn.disabled = false;
+                });
+        }
+    }
+
+    function doLogout() { auth.signOut(); location.reload(); }
+
+    // --- APP LOGIC ---
+    function loadSetupData() {
+        showView('view-setup');
+        document.getElementById('navbar').style.display = 'none';
+        uploadPhotos = myProfile ? (myProfile.photos || []) : [];
+        document.getElementById('setup-name').value = myProfile ? myProfile.name : "";
+        document.getElementById('setup-city').value = myProfile ? myProfile.city : "";
+        document.getElementById('setup-blur').checked = myProfile ? myProfile.isBlur : false;
+        renderPhotoGrid();
+    }
+
+    function renderPhotoGrid() {
+        const grid = document.getElementById('photo-grid');
+        grid.innerHTML = "";
+        uploadPhotos.forEach((pic, idx) => {
+            const div = document.createElement('div');
+            div.className = 'photo-slot';
+            div.innerHTML = `<img src="${pic}"> <div class="remove-photo" onclick="removePhoto(${idx})">×</div>`;
+            grid.appendChild(div);
+        });
+        if(uploadPhotos.length < 4) {
+            const addBtn = document.createElement('div');
+            addBtn.className = 'photo-slot';
+            addBtn.innerHTML = `<i class="fas fa-plus" style="font-size: 1.5rem; color: #ccc;"></i>`;
+            addBtn.onclick = () => document.getElementById('file-input').click();
+            grid.appendChild(addBtn);
+        }
+    }
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (re) => {
+            const img = new Image();
+            img.onload = () => {
+                const cvs = document.createElement('canvas');
+                const ctx = cvs.getContext('2d');
+                const max = 500;
+                let w = img.width, h = img.height;
+                if(w>h){if(w>max){h*=max/w;w=max}}else{if(h>max){w*=max/h;h=max}}
+                cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h);
+                uploadPhotos.push(cvs.toDataURL('image/jpeg', 0.8));
+                renderPhotoGrid();
+            }
+            img.src = re.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+    function removePhoto(i) { uploadPhotos.splice(i, 1); renderPhotoGrid(); }
+
+    async function saveProfile() {
+        const name = document.getElementById('setup-name').value;
+        const city = document.getElementById('setup-city').value;
+        if(!name || !city || uploadPhotos.length === 0) return showToast("Name, City & 1 Photo required", "error");
+
+        await db.collection('users').doc(currentUser.uid).set({
+            name, city, cityLower: city.toLowerCase(),
+            photos: uploadPhotos,
+            isBlur: document.getElementById('setup-blur').checked,
+            email: currentUser.email,
+            isAdmin: currentUser.email === "admin@test.com"
+        }, { merge: true });
+
+        const d = await db.collection('users').doc(currentUser.uid).get();
+        myProfile = d.data();
+        initApp();
+    }
+
+    function initApp() {
+        document.getElementById('navbar').style.display = 'flex';
+        document.getElementById('my-name-display').innerText = myProfile.name;
+        document.getElementById('my-city-display').innerText = myProfile.city;
+        document.getElementById('my-main-pic').src = myProfile.photos[0];
+        if(myProfile.isAdmin) document.getElementById('dev-area').style.display = 'block';
+        navTo('home');
+    }
+
+    function navTo(page) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
+        if(page === 'home') {
+            document.getElementById('view-home').classList.add('active');
+            document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+            loadSuggestions();
+        } else if(page === 'chats') {
+            document.getElementById('view-chats').classList.add('active');
+            document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+            loadChatList();
+        } else if(page === 'profile') {
+            document.getElementById('view-profile').classList.add('active');
+            document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+        }
+    }
+
+    function showView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    // --- CAROUSEL ---
+    async function loadSuggestions() {
+        const area = document.getElementById('card-area');
+        area.innerHTML = `<div class="loading-text">Finding people in ${myProfile.city}...</div>`;
+        const snap = await db.collection('users').where('cityLower', '==', myProfile.cityLower).limit(20).get();
+        let users = [];
+        snap.forEach(d => { if(d.id !== currentUser.uid) users.push({id: d.id, ...d.data()}); });
+        if(users.length === 0) { area.innerHTML = `<div class="loading-text">No one nearby.<br>Try Developer Tools.</div>`; return; }
+        renderCard(users[0]);
+    }
+
+    let currentCardUser = null;
+    let currentImgIdx = 0;
+    function renderCard(user) {
+        currentCardUser = user; currentImgIdx = 0;
+        const area = document.getElementById('card-area');
+        let slides='', dots='';
+        user.photos.forEach((pic, i) => {
+            const active = i===0?'active':'';
+            const blur = user.isBlur?'blur-img':'';
+            slides += `<img src="${pic}" class="carousel-img ${active} ${blur}" id="slide-${i}">`;
+            dots += `<div class="dot ${active}" id="dot-${i}"></div>`;
+        });
+        area.innerHTML = `
+            <div class="profile-card">
+                <div class="carousel">
+                    ${slides} <div class="slider-dots">${dots}</div>
+                    <div class="tap-area tap-left" onclick="slideCard(-1)"></div>
+                    <div class="tap-area tap-right" onclick="slideCard(1)"></div>
+                </div>
+                <div class="card-overlay"><h2>${user.name}</h2><p>${user.city}</p></div>
+            </div>
+            <div class="actions">
+                <button class="act-btn btn-no" onclick="handleSwipe('no')"><i class="fas fa-times"></i></button>
+                <button class="act-btn btn-yes" onclick="handleSwipe('yes')"><i class="fas fa-heart"></i></button>
+            </div>`;
+    }
+    function slideCard(dir) {
+        const max = currentCardUser.photos.length;
+        document.getElementById(`slide-${currentImgIdx}`).classList.remove('active');
+        document.getElementById(`dot-${currentImgIdx}`).classList.remove('active');
+        currentImgIdx = currentImgIdx+dir;
+        if(currentImgIdx<0)currentImgIdx=max-1; if(currentImgIdx>=max)currentImgIdx=0;
+        document.getElementById(`slide-${currentImgIdx}`).classList.add('active');
+        document.getElementById(`dot-${currentImgIdx}`).classList.add('active');
+    }
+    async function handleSwipe(type) {
+        if(type==='yes') {
+            const cid = [currentUser.uid, currentCardUser.id].sort().join('_');
+            await db.collection('matches').doc(cid).set({
+                users: [currentUser.uid, currentCardUser.id],
+                userData: {[currentUser.uid]:{name:myProfile.name,pic:myProfile.photos[0]}, [currentCardUser.id]:{name:currentCardUser.name,pic:currentCardUser.photos[0]}},
+                lastMsg: "It's a Match!", updated: Date.now()
+            }, {merge:true});
+            showToast("It's a Match!", "success");
+        }
+        loadSuggestions();
+    }
+
+    // --- CHAT ---
+    function loadChatList() {
+        const c = document.getElementById('chat-list-container');
+        c.innerHTML = `<div class="loading-text">Loading...</div>`;
+        db.collection('matches').where('users', 'array-contains', currentUser.uid).orderBy('updated', 'desc')
+        .onSnapshot(snap => {
+            c.innerHTML = "";
+            if(snap.empty) return c.innerHTML = `<div class="loading-text">No matches.</div>`;
+            snap.forEach(d => {
+                const data = d.data();
+                const oid = data.users.find(id => id !== currentUser.uid);
+                const ou = data.userData[oid];
+                const div = document.createElement('div');
+                div.className = 'chat-list-item';
+                div.innerHTML = `<img src="${ou.pic}" class="avatar"><div><b>${ou.name}</b><br><small>${data.lastMsg}</small></div>`;
+                div.onclick = () => openChat(d.id, ou);
+                c.appendChild(div);
+            });
+        });
+    }
+    function openChat(id, p) {
+        currentChatId = id;
+        document.getElementById('chat-header-name').innerText = p.name;
+        showView('view-chat-window');
+        document.getElementById('navbar').style.display = 'none';
+        const mc = document.getElementById('msg-container');
+        db.collection('matches').doc(id).collection('messages').orderBy('ts','asc')
+        .onSnapshot(snap => {
+            mc.innerHTML = "";
+            snap.forEach(d => {
+                const m = d.data();
+                const cls = m.uid===currentUser.uid?'msg-me':'msg-them';
+                mc.innerHTML += `<div class="msg ${cls}">${m.txt}</div>`;
+            });
+            mc.scrollTop = mc.scrollHeight;
+        });
+    }
+    function sendMessage() {
+        const inp = document.getElementById('msg-input');
+        const txt = inp.value.trim();
+        if(!txt) return;
+        db.collection('matches').doc(currentChatId).collection('messages').add({txt, uid:currentUser.uid, ts:Date.now()});
+        db.collection('matches').doc(currentChatId).update({lastMsg:txt, updated:Date.now()});
+        inp.value="";
+    }
+    async function generateFakeUsers() {
+        const names = ["Aditi", "Rohan", "Sana"];
+        for(let n of names) {
+            await db.collection('users').add({
+                name:n+"(Bot)", city:myProfile.city, cityLower:myProfile.cityLower,
+                photos:["https://via.placeholder.com/400x500?text=Bot1", "https://via.placeholder.com/400x500?text=Bot2"],
+                isBlur:false, isAdmin:false
+            });
+        }
+        showToast("Fake users added!", "success");
+    }
+</script>
+</body>
+</html>
