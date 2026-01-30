@@ -8,93 +8,100 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* --- RESET & BASE --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { height: 100%; width: 100%; overflow: hidden; background-color: #000; font-family: 'Poppins', sans-serif; }
+        /* --- CORE STYLES --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Poppins', sans-serif; }
+        body, html { height: 100%; width: 100%; overflow: hidden; background-color: #000; color: white; }
 
-        /* --- FIRE ANIMATION CANVAS --- */
-        #fire-canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1; /* Background Layer */
-        }
+        /* --- FIRE ANIMATION BACKGROUND --- */
+        #fire-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.6; }
 
         /* --- APP CONTAINER --- */
-        #app-container {
-            position: relative; width: 100%; height: 100%; z-index: 10; /* Above Animation */
-            display: flex; flex-direction: column;
-        }
+        #app-container { position: relative; width: 100%; height: 100%; z-index: 10; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); }
 
-        /* --- VIEWS SYSTEM --- */
-        .view { display: none; width: 100%; height: 100%; flex-direction: column; animation: zoomIn 0.3s ease; }
+        /* --- VIEWS --- */
+        .view { display: none; width: 100%; height: 100%; flex-direction: column; animation: fadeIn 0.3s ease; }
         .active-view { display: flex; }
-        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
-        /* --- 1. HOME SCREEN (DASHBOARD) --- */
-        #view-home {
-            justify-content: center; align-items: center;
-            background: rgba(0, 0, 0, 0.4); /* Transparent for particles */
-            backdrop-filter: blur(2px);
-        }
-
-        .header-title {
-            color: #fff; font-family: 'Rajdhani', sans-serif; font-size: 32px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px #ff4500;
-            margin-bottom: 50px; text-align: center;
-        }
-
-        .grid-menu {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-            width: 100%; max-width: 350px; padding: 20px;
-        }
-
-        /* --- MODERN SQUARE BUTTONS --- */
-        .app-btn {
-            aspect-ratio: 1/1; /* Perfect Square */
+        /* --- 1. DASHBOARD (MAIN MENU) --- */
+        #view-dashboard { justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .app-logo-text { font-family: 'Rajdhani', sans-serif; font-size: 32px; font-weight: 700; color: white; text-shadow: 0 0 15px #ff4500; margin-bottom: 40px; text-align: center; letter-spacing: 2px; }
+        
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 360px; padding: 20px; }
+        
+        .glass-btn {
+            aspect-ratio: 1/1;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 69, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
+            cursor: pointer;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
         }
-
-        .app-btn:active { transform: scale(0.92); border-color: #ff4500; }
-
-        .btn-icon { font-size: 40px; margin-bottom: 10px; color: #fff; text-shadow: 0 0 15px currentColor; }
-        .btn-label { color: #ccc; font-size: 14px; font-weight: 600; letter-spacing: 1px; }
-
-        /* Specific Colors */
-        .erp-glow { color: #00d2ff; border-color: rgba(0, 210, 255, 0.2); }
-        .erp-glow:hover { box-shadow: 0 0 20px rgba(0, 210, 255, 0.4); }
+        .glass-btn:active { transform: scale(0.95); border-color: #ff4500; }
         
-        .gpt-glow { color: #ff0055; border-color: rgba(255, 0, 85, 0.2); }
-        .gpt-glow:hover { box-shadow: 0 0 20px rgba(255, 0, 85, 0.4); }
+        .btn-icon { font-size: 35px; margin-bottom: 10px; }
+        .btn-text { font-size: 14px; font-weight: 600; color: #ddd; letter-spacing: 1px; }
 
-        /* --- 2. BROWSER VIEW (IFRAME CONTAINER) --- */
-        .browser-view { background: #111; }
-        
-        .nav-bar {
-            height: 60px; background: rgba(20, 20, 20, 0.95);
-            display: flex; align-items: center; padding: 0 15px;
-            border-bottom: 1px solid #333; justify-content: space-between;
-        }
-        
-        .back-btn {
-            color: white; font-size: 20px; width: 40px; height: 40px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%; background: rgba(255,255,255,0.1); cursor: pointer;
-        }
-        
-        .nav-title { color: white; font-weight: 600; font-size: 16px; }
-        
-        .web-frame { flex: 1; width: 100%; border: none; background: white; }
+        /* Glow Effects */
+        .glow-blue:hover { box-shadow: 0 0 20px rgba(0, 200, 255, 0.4); border-color: #00c8ff; }
+        .glow-red:hover { box-shadow: 0 0 20px rgba(255, 0, 80, 0.4); border-color: #ff0050; }
 
-        /* Footer Credit */
-        .footer {
-            position: absolute; bottom: 20px; color: rgba(255,255,255,0.3);
-            font-size: 10px; text-align: center; width: 100%; letter-spacing: 1px;
-        }
+        /* --- 2. ERP PORTAL (BROWSER) --- */
+        #view-erp { background: white; }
+        .browser-nav { height: 55px; background: #222; display: flex; align-items: center; padding: 0 15px; justify-content: space-between; border-bottom: 1px solid #444; }
+        .nav-back { color: white; font-size: 20px; padding: 10px; cursor: pointer; }
+        .nav-title { color: white; font-size: 14px; font-weight: 600; }
+        #erp-frame { flex: 1; border: none; width: 100%; background: white; }
+        .erp-fallback { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #333; display: none; }
+
+        /* --- 3. G-PORTAL (CHAT INTERFACE) --- */
+        /* Variables for Chat */
+        :root { --chat-header: #008069; --chat-bg: #efeae2; --my-msg: #d9fdd3; --user-msg: #ffffff; }
+
+        /* Auth Pages */
+        .auth-container { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); }
+        .auth-logo { font-size: 50px; color: #008069; margin-bottom: 20px; text-align: center; }
+        .auth-input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 25px; border: none; background: rgba(255,255,255,0.9); font-size: 15px; color: #333; }
+        .auth-btn { width: 100%; padding: 15px; border-radius: 25px; border: none; background: #008069; color: white; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        .auth-link { text-align: center; font-size: 13px; color: #ccc; margin-top: 10px; cursor: pointer; }
+
+        /* Chat Home */
+        #view-chat-home { background: #fff; color: #333; }
+        .chat-header { background: var(--chat-header); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .profile-thumb { width: 35px; height: 35px; border-radius: 50%; background: #ddd; object-fit: cover; border: 2px solid white; }
+        .nav-tabs { display: flex; background: var(--chat-header); color: rgba(255,255,255,0.7); font-weight: 600; font-size: 14px; }
+        .tab { flex: 1; text-align: center; padding: 12px; border-bottom: 3px solid transparent; cursor: pointer; }
+        .tab.active { color: white; border-bottom-color: white; }
+        
+        .chat-list { flex: 1; overflow-y: auto; background: white; }
+        .chat-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 15px; cursor: pointer; }
+        .chat-avatar { width: 45px; height: 45px; border-radius: 50%; background: #eee; object-fit: cover; }
+        
+        .fab-btn { position: absolute; bottom: 20px; right: 20px; width: 55px; height: 55px; background: var(--chat-header); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
+
+        /* Chat Room */
+        #view-chat-room { background: var(--chat-bg); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        .room-header { background: var(--chat-header); padding: 10px 15px; display: flex; align-items: center; gap: 10px; color: white; }
+        .msg-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 10px; font-size: 14px; position: relative; word-wrap: break-word; color: #333; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .sent { align-self: flex-end; background: var(--my-msg); border-top-right-radius: 0; }
+        .received { align-self: flex-start; background: var(--user-msg); border-top-left-radius: 0; }
+        .msg-img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; }
+        .chat-input-bar { padding: 8px; display: flex; align-items: center; gap: 8px; }
+        .chat-input { flex: 1; padding: 10px 15px; border-radius: 25px; border: none; font-size: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .send-circle { width: 45px; height: 45px; background: var(--chat-header); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; }
+
+        /* Modals */
+        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal-box { background: white; width: 85%; padding: 25px; border-radius: 10px; color: #333; text-align: center; }
+        .user-preview { margin-top: 15px; display: none; }
+        .preview-img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--chat-header); }
+
+        .dev-footer { position: absolute; bottom: 15px; width: 100%; text-align: center; color: rgba(255,255,255,0.4); font-size: 10px; letter-spacing: 1px; }
 
     </style>
 </head>
@@ -104,166 +111,376 @@
 
 <div id="app-container">
 
-    <div id="view-home" class="view active-view">
-        <div class="header-title">Gaurav<br>Portal OS</div>
-
-        <div class="grid-menu">
-            <div class="app-btn erp-glow" onclick="openLink('erp')">
-                <i class="fas fa-university btn-icon" style="color: #00d2ff;"></i>
-                <span class="btn-label">ERP LOGIN</span>
+    <div id="view-dashboard" class="view active-view">
+        <div class="app-logo-text">G-PORTAL<br>OS</div>
+        
+        <div class="menu-grid">
+            <div class="glass-btn glow-blue" onclick="openERP()">
+                <i class="fas fa-globe btn-icon" style="color: #00c8ff;"></i>
+                <span class="btn-text">ERP LOGIN</span>
             </div>
 
-            <div class="app-btn gpt-glow" onclick="openLink('gportal')">
-                <i class="fas fa-comment-dots btn-icon" style="color: #ff0055;"></i>
-                <span class="btn-label">G PORTAL</span>
+            <div class="glass-btn glow-red" onclick="openGPortal()">
+                <i class="fas fa-comment-dots btn-icon" style="color: #ff0050;"></i>
+                <span class="btn-text">G-CHAT</span>
             </div>
         </div>
 
-        <div class="footer">DEVELOPED BY GAURAV SHYAM SHUKLA</div>
+        <div class="dev-footer">DEVELOPED BY GAURAV SHYAM SHUKLA</div>
     </div>
 
-    <div id="view-browser" class="view browser-view">
-        <div class="nav-bar">
-            <div class="back-btn" onclick="goHome()"><i class="fas fa-arrow-left"></i></div>
-            <span class="nav-title" id="browser-title">Loading...</span>
-            <div style="width:40px;"></div> </div>
-        <iframe id="main-frame" class="web-frame" src=""></iframe>
+    <div id="view-erp" class="view">
+        <div class="browser-nav">
+            <i class="fas fa-arrow-left nav-back" onclick="goHome()"></i>
+            <span class="nav-title">ERP Portal</span>
+            <div style="width:30px;"></div>
+        </div>
+        <iframe id="erp-frame" src=""></iframe>
+        <div id="erp-error" class="erp-fallback">
+            <p>Portal isn't loading?</p>
+            <button class="auth-btn" style="width:auto; margin-top:10px;" onclick="window.open('https://entab.online/abicrs', '_system')">Open in Browser</button>
+        </div>
+    </div>
+
+    <div id="view-login" class="view">
+        <div class="auth-container">
+            <i class="fas fa-arrow-left" style="color:white; font-size:24px; margin-bottom:20px; cursor:pointer;" onclick="goHome()"></i>
+            <div class="auth-logo"><i class="fas fa-comments"></i></div>
+            <h2 style="color:white; text-align:center; margin-bottom:30px;">Welcome Back</h2>
+            <input type="email" id="login-email" class="auth-input" placeholder="Email Address">
+            <input type="password" id="login-pass" class="auth-input" placeholder="Password">
+            <button class="auth-btn" onclick="handleLogin()">LOGIN</button>
+            <div class="auth-link" onclick="showView('view-signup')">Create New Account</div>
+        </div>
+    </div>
+
+    <div id="view-signup" class="view">
+        <div class="auth-container">
+            <h2 style="color:white; text-align:center; margin-bottom:30px;">Create Account</h2>
+            <input type="email" id="reg-email" class="auth-input" placeholder="Email">
+            <input type="password" id="reg-pass" class="auth-input" placeholder="Password">
+            <input type="password" id="reg-confirm" class="auth-input" placeholder="Confirm Password">
+            <button class="auth-btn" onclick="handleSignup()">REGISTER</button>
+            <div class="auth-link" onclick="showView('view-login')">Back to Login</div>
+        </div>
+    </div>
+
+    <div id="view-profile" class="view">
+        <div class="auth-container">
+            <h3 style="color:white; text-align:center;">Setup Profile</h3>
+            <div style="text-align:center; margin:20px 0;" onclick="document.getElementById('profile-file').click()">
+                <img id="preview-img" src="https://via.placeholder.com/100" style="width:100px; height:100px; border-radius:50%; border:3px solid white;">
+                <input type="file" id="profile-file" hidden onchange="previewImage(this)">
+            </div>
+            <input type="text" id="setup-user" class="auth-input" placeholder="@Username (Unique)">
+            <input type="text" id="setup-nick" class="auth-input" placeholder="Display Name">
+            <button class="auth-btn" onclick="saveProfile()">START CHATTING</button>
+        </div>
+    </div>
+
+    <div id="view-chat-home" class="view">
+        <div class="chat-header">
+            <div class="header-left">
+                <i class="fas fa-arrow-left" onclick="goHome()"></i>
+                <img id="my-pic" class="profile-thumb">
+                <span style="font-weight:600;">Kinder Chat</span>
+            </div>
+            <i class="fas fa-sign-out-alt" onclick="logout()"></i>
+        </div>
+        <div class="nav-tabs">
+            <div class="tab active" id="tab-chats" onclick="switchTab('chats')">CHATS</div>
+            <div class="tab" id="tab-reqs" onclick="switchTab('reqs')">REQUESTS <span id="req-count"></span></div>
+        </div>
+        <div id="list-chats" class="chat-list"></div>
+        <div id="list-reqs" class="chat-list" style="display:none;"></div>
+        <div class="fab-btn" onclick="openAddModal()"><i class="fas fa-user-plus"></i></div>
+    </div>
+
+    <div id="view-chat-room" class="view">
+        <div class="room-header">
+            <i class="fas fa-arrow-left" onclick="showView('view-chat-home')"></i>
+            <img id="room-img" class="profile-thumb">
+            <span id="room-name" style="font-weight:600;">User</span>
+        </div>
+        <div id="msg-box" class="msg-container"></div>
+        <div class="chat-input-bar">
+            <i class="fas fa-paperclip" style="color:#555; font-size:20px;" onclick="document.getElementById('img-file').click()"></i>
+            <input type="file" id="img-file" hidden accept="image/*" onchange="sendImage()">
+            <input type="text" id="msg-input" class="chat-input" placeholder="Message...">
+            <div class="send-circle" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></div>
+        </div>
+    </div>
+
+    <div id="modal-add" class="modal">
+        <div class="modal-box">
+            <h3>Add Friend</h3>
+            <input type="text" id="search-user" class="auth-input" style="border:1px solid #ddd; margin-top:15px;" placeholder="Enter Username">
+            <button class="auth-btn" style="width:auto; padding:10px 20px;" onclick="searchUser()">Search</button>
+            <button class="auth-btn" style="width:auto; background:#666;" onclick="closeModal()">Close</button>
+            
+            <div id="found-user" class="user-preview">
+                <img id="found-img" class="preview-img">
+                <div id="found-name" style="font-weight:bold; margin:5px 0;">Name</div>
+                <button class="auth-btn" onclick="sendReq()">Send Request</button>
+            </div>
+        </div>
     </div>
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <script>
-    /* =========================================
-       1. FIRE PARTICLE RAIN ANIMATION ENGINE
-       ========================================= */
+    // --- 1. FIRE ANIMATION SYSTEM ---
     const canvas = document.getElementById('fire-canvas');
     const ctx = canvas.getContext('2d');
-    let width, height;
     let particles = [];
-
-    function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
+    
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
 
     class Particle {
-        constructor() {
-            this.reset(true);
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vy = 1 + Math.random() * 3;
+            this.size = 1 + Math.random() * 2;
+            this.life = Math.random();
+            this.color = `rgba(255, ${Math.floor(Math.random()*100)}, 0,`;
         }
-
-        reset(initial = false) {
-            this.x = Math.random() * width;
-            this.y = initial ? Math.random() * height : -10; // Start from top
-            this.vy = 2 + Math.random() * 4; // Falling speed
-            this.vx = (Math.random() - 0.5) * 2; // Horizontal drift
-            this.r = 1 + Math.random() * 2; // Size
-            this.life = 1; // Opacity
-            this.decay = 0.005 + Math.random() * 0.01;
-            
-            // Fire Colors: Yellow -> Orange -> Red
-            const colors = ["#ff4500", "#ff8c00", "#ffd700", "#ff3333"];
-            this.color = colors[Math.floor(Math.random() * colors.length)];
-        }
-
         update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.life -= this.decay;
-
-            // Reset if out of screen or faded
-            if (this.y > height || this.life < 0) {
-                this.reset();
-            }
+            this.y += this.vy; this.life -= 0.01;
+            if (this.y > canvas.height || this.life < 0) this.reset();
         }
-
         draw() {
-            ctx.globalAlpha = this.life;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Add Glow
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = this.color;
+            ctx.fillStyle = this.color + this.life + ')';
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
         }
     }
-
-    // Initialize Particles
-    for (let i = 0; i < 100; i++) {
-        particles.push(new Particle());
-    }
-
+    for(let i=0; i<60; i++) particles.push(new Particle());
     function animate() {
-        ctx.clearRect(0, 0, width, height);
-        // Create semi-transparent trail for "rain" effect
-        // ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-        // ctx.fillRect(0, 0, width, height);
-
-        particles.forEach(p => {
-            p.update();
-            p.draw();
-        });
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        particles.forEach(p => { p.update(); p.draw(); });
         requestAnimationFrame(animate);
     }
     animate();
 
-
-    /* =========================================
-       2. APP NAVIGATION LOGIC
-       ========================================= */
+    // --- 2. FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAwhl7FFVAeDfypJ3AO092efTzLvXgEg5U",
+        authDomain: "kinderbook-fd7a6.firebaseapp.com",
+        databaseURL: "https://kinderbook-fd7a6-default-rtdb.firebaseio.com",
+        projectId: "kinderbook-fd7a6",
+        storageBucket: "kinderbook-fd7a6.firebasestorage.app",
+        messagingSenderId: "812593237688",
+        appId: "1:812593237688:web:249a4b871b9c717b8f2e4d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
     
-    // Links Configuration
-    const LINKS = {
-        'erp': {
-            url: 'https://entab.online/abicrs',
-            title: 'ERP Portal'
-        },
-        'gportal': {
-            url: 'https://gurv1432.github.io/kinder-book/',
-            title: 'Kinder Book (Chat)'
-        }
-    };
+    let currentUser = null;
+    let currentChatId = null;
+    let foundUid = null;
 
-    function openLink(key) {
-        const data = LINKS[key];
-        const frame = document.getElementById('main-frame');
-        const title = document.getElementById('browser-title');
-        
-        // Reset frame to show loading state visual
-        frame.src = "about:blank"; 
-        
-        // Update UI
-        title.innerText = data.title;
-        
-        // Load URL
-        setTimeout(() => {
-            frame.src = data.url;
-        }, 100);
-
-        // Switch View
-        document.getElementById('view-home').classList.remove('active-view');
-        document.getElementById('view-browser').classList.add('active-view');
+    // --- 3. NAVIGATION LOGIC ---
+    function showView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
+        document.getElementById(id).classList.add('active-view');
     }
 
-    function goHome() {
-        document.getElementById('view-browser').classList.remove('active-view');
-        document.getElementById('view-home').classList.add('active-view');
-        
-        // Clear iframe to stop background processing/audio
-        document.getElementById('main-frame').src = "";
+    function goHome() { 
+        document.getElementById('erp-frame').src = ""; // Stop audio/video
+        showView('view-dashboard'); 
     }
 
-    // Android Hardware Back Button Handling
-    window.onpopstate = function(event) {
-        if(document.getElementById('view-browser').classList.contains('active-view')) {
-            goHome();
-        }
-    };
-    // Push initial state
-    history.pushState(null, null, window.location.pathname);
+    function openERP() {
+        const frame = document.getElementById('erp-frame');
+        frame.src = "https://entab.online/abicrs";
+        showView('view-erp');
+        // Check if iframe fails (Simple timeout fallback)
+        setTimeout(() => { document.getElementById('erp-error').style.display = 'block'; }, 3000);
+    }
+
+    function openGPortal() {
+        if(auth.currentUser) checkUserDb();
+        else showView('view-login');
+    }
+
+    // --- 4. AUTH LOGIC ---
+    function handleLogin() {
+        const e = document.getElementById('login-email').value;
+        const p = document.getElementById('login-pass').value;
+        auth.signInWithEmailAndPassword(e, p).then(checkUserDb).catch(e => alert(e.message));
+    }
+
+    function handleSignup() {
+        const e = document.getElementById('reg-email').value;
+        const p = document.getElementById('reg-pass').value;
+        auth.createUserWithEmailAndPassword(e, p).then(() => showView('view-profile')).catch(e => alert(e.message));
+    }
+
+    function checkUserDb() {
+        currentUser = auth.currentUser;
+        db.ref('users/' + currentUser.uid).once('value').then(snap => {
+            if(snap.exists()) initChat();
+            else showView('view-profile');
+        });
+    }
+
+    function logout() { auth.signOut().then(goHome); }
+
+    // --- 5. PROFILE ---
+    let profilePic = "";
+    function previewImage(input) {
+        const reader = new FileReader();
+        reader.onload = e => { profilePic = e.target.result; document.getElementById('preview-img').src = profilePic; };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function saveProfile() {
+        const u = document.getElementById('setup-user').value.toLowerCase().trim();
+        const n = document.getElementById('setup-nick').value;
+        if(!u || !n) return alert("Fill all fields");
+
+        db.ref('usernames/'+u).once('value').then(snap => {
+            if(snap.exists()) return alert("Username taken");
+            const data = { uid: currentUser.uid, email: currentUser.email, username: u, nickname: n, photo: profilePic || "https://via.placeholder.com/100" };
+            db.ref('users/'+currentUser.uid).set(data);
+            db.ref('usernames/'+u).set(currentUser.uid);
+            initChat();
+        });
+    }
+
+    // --- 6. CHAT CORE ---
+    function initChat() {
+        showView('view-chat-home');
+        db.ref('users/'+currentUser.uid).once('value').then(s => {
+            document.getElementById('my-pic').src = s.val().photo;
+        });
+        loadChats();
+        loadReqs();
+    }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+        document.getElementById('tab-'+t).classList.add('active');
+        document.getElementById('list-chats').style.display = t==='chats'?'block':'none';
+        document.getElementById('list-reqs').style.display = t==='reqs'?'block':'none';
+    }
+
+    function loadChats() {
+        db.ref('contacts/'+currentUser.uid).on('value', snap => {
+            const list = document.getElementById('list-chats');
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                db.ref('users/'+doc.key).once('value').then(u => {
+                    const user = u.val();
+                    const div = document.createElement('div');
+                    div.className = 'chat-item';
+                    div.innerHTML = `<img src="${user.photo}" class="chat-avatar"><div><b>${user.nickname}</b><br><small>@${user.username}</small></div>`;
+                    div.onclick = () => openRoom(user);
+                    list.appendChild(div);
+                });
+            });
+        });
+    }
+
+    function openRoom(user) {
+        currentChatId = currentUser.uid < user.uid ? `${currentUser.uid}_${user.uid}` : `${user.uid}_${currentUser.uid}`;
+        document.getElementById('room-name').innerText = user.nickname;
+        document.getElementById('room-img').src = user.photo;
+        showView('view-chat-room');
+        
+        const box = document.getElementById('msg-box');
+        box.innerHTML = "";
+        db.ref('chats/'+currentChatId).limitToLast(50).on('child_added', s => renderMsg(s.val()));
+    }
+
+    function renderMsg(msg) {
+        const box = document.getElementById('msg-box');
+        const div = document.createElement('div');
+        const isMe = msg.sender === currentUser.uid;
+        div.className = `msg-bubble ${isMe ? 'sent' : 'received'}`;
+        
+        if(msg.type === 'img') div.innerHTML = `<img src="${msg.content}" class="msg-img">`;
+        else div.innerText = msg.content;
+        
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function sendMessage() {
+        const txt = document.getElementById('msg-input').value.trim();
+        if(!txt) return;
+        db.ref('chats/'+currentChatId).push({ sender: currentUser.uid, content: txt, type: 'text', ts: Date.now() });
+        document.getElementById('msg-input').value = "";
+    }
+
+    function sendImage() {
+        const file = document.getElementById('img-file').files[0];
+        const reader = new FileReader();
+        reader.onload = e => {
+            db.ref('chats/'+currentChatId).push({ sender: currentUser.uid, content: e.target.result, type: 'img', ts: Date.now() });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // --- 7. REQUEST SYSTEM ---
+    function openAddModal() { document.getElementById('modal-add').style.display = 'flex'; }
+    function closeModal() { document.getElementById('modal-add').style.display = 'none'; }
+
+    function searchUser() {
+        const u = document.getElementById('search-user').value.toLowerCase();
+        db.ref('usernames/'+u).once('value').then(s => {
+            if(!s.exists()) return alert("User not found");
+            foundUid = s.val();
+            db.ref('users/'+foundUid).once('value').then(us => {
+                const user = us.val();
+                document.getElementById('found-name').innerText = user.nickname;
+                document.getElementById('found-img').src = user.photo;
+                document.getElementById('found-user').style.display = 'block';
+            });
+        });
+    }
+
+    function sendReq() {
+        db.ref(`requests/${foundUid}/${currentUser.uid}`).set(true).then(() => {
+            alert("Request Sent!"); closeModal();
+        });
+    }
+
+    function loadReqs() {
+        db.ref('requests/'+currentUser.uid).on('value', snap => {
+            const list = document.getElementById('list-reqs');
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                db.ref('users/'+doc.key).once('value').then(u => {
+                    const user = u.val();
+                    const div = document.createElement('div');
+                    div.className = 'chat-item';
+                    div.innerHTML = `<img src="${user.photo}" class="chat-avatar"><div><b>${user.nickname}</b><br><small>Wants to connect</small></div><button class="auth-btn" style="width:auto; margin:0 0 0 auto; padding:5px 15px;" onclick="accept('${doc.key}')">Accept</button>`;
+                    list.appendChild(div);
+                });
+            });
+        });
+    }
+
+    function accept(uid) {
+        const up = {};
+        up[`contacts/${currentUser.uid}/${uid}`] = true;
+        up[`contacts/${uid}/${currentUser.uid}`] = true;
+        up[`requests/${currentUser.uid}/${uid}`] = null;
+        db.ref().update(up);
+    }
+
+    // --- PANIC MODE (Back to Dashboard) ---
+    document.addEventListener("visibilitychange", () => {
+        if(document.hidden) goHome();
+    });
 
 </script>
 </body>
