@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gaurav Super App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- RESET & BASE --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body, html { height: 100%; width: 100%; overflow: hidden; background-color: #000; font-family: 'Poppins', sans-serif; }
+
+        /* --- FIRE ANIMATION CANVAS --- */
+        #fire-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; /* Background Layer */
+        }
+
+        /* --- APP CONTAINER --- */
+        #app-container {
+            position: relative; width: 100%; height: 100%; z-index: 10; /* Above Animation */
+            display: flex; flex-direction: column;
+        }
+
+        /* --- VIEWS SYSTEM --- */
+        .view { display: none; width: 100%; height: 100%; flex-direction: column; animation: zoomIn 0.3s ease; }
+        .active-view { display: flex; }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- 1. HOME SCREEN (DASHBOARD) --- */
+        #view-home {
+            justify-content: center; align-items: center;
+            background: rgba(0, 0, 0, 0.4); /* Transparent for particles */
+            backdrop-filter: blur(2px);
+        }
+
+        .header-title {
+            color: #fff; font-family: 'Rajdhani', sans-serif; font-size: 32px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px #ff4500;
+            margin-bottom: 50px; text-align: center;
+        }
+
+        .grid-menu {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+            width: 100%; max-width: 350px; padding: 20px;
+        }
+
+        /* --- MODERN SQUARE BUTTONS --- */
+        .app-btn {
+            aspect-ratio: 1/1; /* Perfect Square */
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 20px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .app-btn:active { transform: scale(0.92); border-color: #ff4500; }
+
+        .btn-icon { font-size: 40px; margin-bottom: 10px; color: #fff; text-shadow: 0 0 15px currentColor; }
+        .btn-label { color: #ccc; font-size: 14px; font-weight: 600; letter-spacing: 1px; }
+
+        /* Specific Colors */
+        .erp-glow { color: #00d2ff; border-color: rgba(0, 210, 255, 0.2); }
+        .erp-glow:hover { box-shadow: 0 0 20px rgba(0, 210, 255, 0.4); }
+        
+        .gpt-glow { color: #ff0055; border-color: rgba(255, 0, 85, 0.2); }
+        .gpt-glow:hover { box-shadow: 0 0 20px rgba(255, 0, 85, 0.4); }
+
+        /* --- 2. BROWSER VIEW (IFRAME CONTAINER) --- */
+        .browser-view { background: #111; }
+        
+        .nav-bar {
+            height: 60px; background: rgba(20, 20, 20, 0.95);
+            display: flex; align-items: center; padding: 0 15px;
+            border-bottom: 1px solid #333; justify-content: space-between;
+        }
+        
+        .back-btn {
+            color: white; font-size: 20px; width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; background: rgba(255,255,255,0.1); cursor: pointer;
+        }
+        
+        .nav-title { color: white; font-weight: 600; font-size: 16px; }
+        
+        .web-frame { flex: 1; width: 100%; border: none; background: white; }
+
+        /* Footer Credit */
+        .footer {
+            position: absolute; bottom: 20px; color: rgba(255,255,255,0.3);
+            font-size: 10px; text-align: center; width: 100%; letter-spacing: 1px;
+        }
+
+    </style>
+</head>
+<body>
+
+<canvas id="fire-canvas"></canvas>
+
+<div id="app-container">
+
+    <div id="view-home" class="view active-view">
+        <div class="header-title">Gaurav<br>Portal OS</div>
+
+        <div class="grid-menu">
+            <div class="app-btn erp-glow" onclick="openLink('erp')">
+                <i class="fas fa-university btn-icon" style="color: #00d2ff;"></i>
+                <span class="btn-label">ERP LOGIN</span>
+            </div>
+
+            <div class="app-btn gpt-glow" onclick="openLink('gportal')">
+                <i class="fas fa-comment-dots btn-icon" style="color: #ff0055;"></i>
+                <span class="btn-label">G PORTAL</span>
+            </div>
+        </div>
+
+        <div class="footer">DEVELOPED BY GAURAV SHYAM SHUKLA</div>
+    </div>
+
+    <div id="view-browser" class="view browser-view">
+        <div class="nav-bar">
+            <div class="back-btn" onclick="goHome()"><i class="fas fa-arrow-left"></i></div>
+            <span class="nav-title" id="browser-title">Loading...</span>
+            <div style="width:40px;"></div> </div>
+        <iframe id="main-frame" class="web-frame" src=""></iframe>
+    </div>
+
+</div>
+
+<script>
+    /* =========================================
+       1. FIRE PARTICLE RAIN ANIMATION ENGINE
+       ========================================= */
+    const canvas = document.getElementById('fire-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+        constructor() {
+            this.reset(true);
+        }
+
+        reset(initial = false) {
+            this.x = Math.random() * width;
+            this.y = initial ? Math.random() * height : -10; // Start from top
+            this.vy = 2 + Math.random() * 4; // Falling speed
+            this.vx = (Math.random() - 0.5) * 2; // Horizontal drift
+            this.r = 1 + Math.random() * 2; // Size
+            this.life = 1; // Opacity
+            this.decay = 0.005 + Math.random() * 0.01;
+            
+            // Fire Colors: Yellow -> Orange -> Red
+            const colors = ["#ff4500", "#ff8c00", "#ffd700", "#ff3333"];
+            this.color = colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.life -= this.decay;
+
+            // Reset if out of screen or faded
+            if (this.y > height || this.life < 0) {
+                this.reset();
+            }
+        }
+
+        draw() {
+            ctx.globalAlpha = this.life;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add Glow
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = this.color;
+        }
+    }
+
+    // Initialize Particles
+    for (let i = 0; i < 100; i++) {
+        particles.push(new Particle());
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        // Create semi-transparent trail for "rain" effect
+        // ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        // ctx.fillRect(0, 0, width, height);
+
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+
+    /* =========================================
+       2. APP NAVIGATION LOGIC
+       ========================================= */
+    
+    // Links Configuration
+    const LINKS = {
+        'erp': {
+            url: 'https://entab.online/abicrs',
+            title: 'ERP Portal'
+        },
+        'gportal': {
+            url: 'https://gurv1432.github.io/kinder-book/',
+            title: 'Kinder Book (Chat)'
+        }
+    };
+
+    function openLink(key) {
+        const data = LINKS[key];
+        const frame = document.getElementById('main-frame');
+        const title = document.getElementById('browser-title');
+        
+        // Reset frame to show loading state visual
+        frame.src = "about:blank"; 
+        
+        // Update UI
+        title.innerText = data.title;
+        
+        // Load URL
+        setTimeout(() => {
+            frame.src = data.url;
+        }, 100);
+
+        // Switch View
+        document.getElementById('view-home').classList.remove('active-view');
+        document.getElementById('view-browser').classList.add('active-view');
+    }
+
+    function goHome() {
+        document.getElementById('view-browser').classList.remove('active-view');
+        document.getElementById('view-home').classList.add('active-view');
+        
+        // Clear iframe to stop background processing/audio
+        document.getElementById('main-frame').src = "";
+    }
+
+    // Android Hardware Back Button Handling
+    window.onpopstate = function(event) {
+        if(document.getElementById('view-browser').classList.contains('active-view')) {
+            goHome();
+        }
+    };
+    // Push initial state
+    history.pushState(null, null, window.location.pathname);
+
+</script>
+</body>
+</html>
