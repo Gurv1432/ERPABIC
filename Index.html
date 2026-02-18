@@ -1,487 +1,450 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gaurav Super App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Poppins:wght@300;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
 
-    <style>
-        /* --- CORE STYLES --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Poppins', sans-serif; }
-        body, html { height: 100%; width: 100%; overflow: hidden; background-color: #000; color: white; }
+// 🔥 Firebase
+import { initializeApp } from "firebase/app";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  updateDoc,
+  query,
+  where,
+} from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-        /* --- FIRE ANIMATION BACKGROUND --- */
-        #fire-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.6; }
+// ✅ YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyDY8dXZzCHITz7JBfTiWacI72RJvbvD3U8",
+  authDomain: "my-khata-book-23413.firebaseapp.com",
+  projectId: "my-khata-book-23413",
+  storageBucket: "my-khata-book-23413.firebasestorage.app",
+  messagingSenderId: "459661864450",
+  appId: "1:459661864450:web:9b9da51633c8238023411b",
+};
 
-        /* --- APP CONTAINER --- */
-        #app-container { position: relative; width: 100%; height: 100%; z-index: 10; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); }
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-        /* --- VIEWS --- */
-        .view { display: none; width: 100%; height: 100%; flex-direction: column; animation: fadeIn 0.3s ease; }
-        .active-view { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+export default function KhataBookApp() {
+  const [users, setUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [view, setView] = useState("login"); // login | signup | app | edit
 
-        /* --- 1. DASHBOARD (MAIN MENU) --- */
-        #view-dashboard { justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-        .app-logo-text { font-family: 'Rajdhani', sans-serif; font-size: 32px; font-weight: 700; color: white; text-shadow: 0 0 15px #ff4500; margin-bottom: 40px; text-align: center; letter-spacing: 2px; }
-        
-        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 360px; padding: 20px; }
-        
-        .glass-btn {
-            aspect-ratio: 1/1;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            backdrop-filter: blur(8px);
-            transition: all 0.3s ease;
-        }
-        .glass-btn:active { transform: scale(0.95); border-color: #ff4500; }
-        
-        .btn-icon { font-size: 35px; margin-bottom: 10px; }
-        .btn-text { font-size: 14px; font-weight: 600; color: #ddd; letter-spacing: 1px; }
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loginId, setLoginId] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
+  const [connectCode, setConnectCode] = useState("");
 
-        /* Glow Effects */
-        .glow-blue:hover { box-shadow: 0 0 20px rgba(0, 200, 255, 0.4); border-color: #00c8ff; }
-        .glow-red:hover { box-shadow: 0 0 20px rgba(255, 0, 80, 0.4); border-color: #ff0050; }
+  const [selectedLedger, setSelectedLedger] = useState(null);
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("");
+  const [entryType, setEntryType] = useState("given");
 
-        /* --- 2. ERP PORTAL (BROWSER) --- */
-        #view-erp { background: white; }
-        .browser-nav { height: 55px; background: #222; display: flex; align-items: center; padding: 0 15px; justify-content: space-between; border-bottom: 1px solid #444; }
-        .nav-back { color: white; font-size: 20px; padding: 10px; cursor: pointer; }
-        .nav-title { color: white; font-size: 14px; font-weight: 600; }
-        #erp-frame { flex: 1; border: none; width: 100%; background: white; }
-        .erp-fallback { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #333; display: none; }
+  const generateCode = () => "U" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-        /* --- 3. G-PORTAL (CHAT INTERFACE) --- */
-        /* Variables for Chat */
-        :root { --chat-header: #008069; --chat-bg: #efeae2; --my-msg: #d9fdd3; --user-msg: #ffffff; }
+  // 🔄 Realtime users sync
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "users"), (snapshot) => {
+      setUsers(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
 
-        /* Auth Pages */
-        .auth-container { padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); }
-        .auth-logo { font-size: 50px; color: #008069; margin-bottom: 20px; text-align: center; }
-        .auth-input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 25px; border: none; background: rgba(255,255,255,0.9); font-size: 15px; color: #333; }
-        .auth-btn { width: 100%; padding: 15px; border-radius: 25px; border: none; background: #008069; color: white; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
-        .auth-link { text-align: center; font-size: 13px; color: #ccc; margin-top: 10px; cursor: pointer; }
+  // 👤 Signup
+  const createUser = async () => {
+    if (!name || !phone) return alert("Enter details");
 
-        /* Chat Home */
-        #view-chat-home { background: #fff; color: #333; }
-        .chat-header { background: var(--chat-header); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        .profile-thumb { width: 35px; height: 35px; border-radius: 50%; background: #ddd; object-fit: cover; border: 2px solid white; }
-        .nav-tabs { display: flex; background: var(--chat-header); color: rgba(255,255,255,0.7); font-weight: 600; font-size: 14px; }
-        .tab { flex: 1; text-align: center; padding: 12px; border-bottom: 3px solid transparent; cursor: pointer; }
-        .tab.active { color: white; border-bottom-color: white; }
-        
-        .chat-list { flex: 1; overflow-y: auto; background: white; }
-        .chat-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 15px; cursor: pointer; }
-        .chat-avatar { width: 45px; height: 45px; border-radius: 50%; background: #eee; object-fit: cover; }
-        
-        .fab-btn { position: absolute; bottom: 20px; right: 20px; width: 55px; height: 55px; background: var(--chat-header); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
+    const code = generateCode();
 
-        /* Chat Room */
-        #view-chat-room { background: var(--chat-bg); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-        .room-header { background: var(--chat-header); padding: 10px 15px; display: flex; align-items: center; gap: 10px; color: white; }
-        .msg-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
-        .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 10px; font-size: 14px; position: relative; word-wrap: break-word; color: #333; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
-        .sent { align-self: flex-end; background: var(--my-msg); border-top-right-radius: 0; }
-        .received { align-self: flex-start; background: var(--user-msg); border-top-left-radius: 0; }
-        .msg-img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; }
-        .chat-input-bar { padding: 8px; display: flex; align-items: center; gap: 8px; }
-        .chat-input { flex: 1; padding: 10px 15px; border-radius: 25px; border: none; font-size: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .send-circle { width: 45px; height: 45px; background: var(--chat-header); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; }
-
-        /* Modals */
-        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; }
-        .modal-box { background: white; width: 85%; padding: 25px; border-radius: 10px; color: #333; text-align: center; }
-        .user-preview { margin-top: 15px; display: none; }
-        .preview-img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--chat-header); }
-
-        .dev-footer { position: absolute; bottom: 15px; width: 100%; text-align: center; color: rgba(255,255,255,0.4); font-size: 10px; letter-spacing: 1px; }
-
-    </style>
-</head>
-<body>
-
-<canvas id="fire-canvas"></canvas>
-
-<div id="app-container">
-
-    <div id="view-dashboard" class="view active-view">
-        <div class="app-logo-text">G-PORTAL<br>OS</div>
-        
-        <div class="menu-grid">
-            <div class="glass-btn glow-blue" onclick="openERP()">
-                <i class="fas fa-globe btn-icon" style="color: #00c8ff;"></i>
-                <span class="btn-text">ERP LOGIN</span>
-            </div>
-
-            <div class="glass-btn glow-red" onclick="openGPortal()">
-                <i class="fas fa-comment-dots btn-icon" style="color: #ff0050;"></i>
-                <span class="btn-text">G-CHAT</span>
-            </div>
-        </div>
-
-        <div class="dev-footer">DEVELOPED BY GAURAV SHYAM SHUKLA</div>
-    </div>
-
-    <div id="view-erp" class="view">
-        <div class="browser-nav">
-            <i class="fas fa-arrow-left nav-back" onclick="goHome()"></i>
-            <span class="nav-title">ERP Portal</span>
-            <div style="width:30px;"></div>
-        </div>
-        <iframe id="erp-frame" src=""></iframe>
-        <div id="erp-error" class="erp-fallback">
-            <p>Portal isn't loading?</p>
-            <button class="auth-btn" style="width:auto; margin-top:10px;" onclick="window.open('https://entab.online/abicrs', '_system')">Open in Browser</button>
-        </div>
-    </div>
-
-    <div id="view-login" class="view">
-        <div class="auth-container">
-            <i class="fas fa-arrow-left" style="color:white; font-size:24px; margin-bottom:20px; cursor:pointer;" onclick="goHome()"></i>
-            <div class="auth-logo"><i class="fas fa-comments"></i></div>
-            <h2 style="color:white; text-align:center; margin-bottom:30px;">Welcome Back</h2>
-            <input type="email" id="login-email" class="auth-input" placeholder="Email Address">
-            <input type="password" id="login-pass" class="auth-input" placeholder="Password">
-            <button class="auth-btn" onclick="handleLogin()">LOGIN</button>
-            <div class="auth-link" onclick="showView('view-signup')">Create New Account</div>
-        </div>
-    </div>
-
-    <div id="view-signup" class="view">
-        <div class="auth-container">
-            <h2 style="color:white; text-align:center; margin-bottom:30px;">Create Account</h2>
-            <input type="email" id="reg-email" class="auth-input" placeholder="Email">
-            <input type="password" id="reg-pass" class="auth-input" placeholder="Password">
-            <input type="password" id="reg-confirm" class="auth-input" placeholder="Confirm Password">
-            <button class="auth-btn" onclick="handleSignup()">REGISTER</button>
-            <div class="auth-link" onclick="showView('view-login')">Back to Login</div>
-        </div>
-    </div>
-
-    <div id="view-profile" class="view">
-        <div class="auth-container">
-            <h3 style="color:white; text-align:center;">Setup Profile</h3>
-            <div style="text-align:center; margin:20px 0;" onclick="document.getElementById('profile-file').click()">
-                <img id="preview-img" src="https://via.placeholder.com/100" style="width:100px; height:100px; border-radius:50%; border:3px solid white;">
-                <input type="file" id="profile-file" hidden onchange="previewImage(this)">
-            </div>
-            <input type="text" id="setup-user" class="auth-input" placeholder="@Username (Unique)">
-            <input type="text" id="setup-nick" class="auth-input" placeholder="Display Name">
-            <button class="auth-btn" onclick="saveProfile()">START CHATTING</button>
-        </div>
-    </div>
-
-    <div id="view-chat-home" class="view">
-        <div class="chat-header">
-            <div class="header-left">
-                <i class="fas fa-arrow-left" onclick="goHome()"></i>
-                <img id="my-pic" class="profile-thumb">
-                <span style="font-weight:600;">Kinder Chat</span>
-            </div>
-            <i class="fas fa-sign-out-alt" onclick="logout()"></i>
-        </div>
-        <div class="nav-tabs">
-            <div class="tab active" id="tab-chats" onclick="switchTab('chats')">CHATS</div>
-            <div class="tab" id="tab-reqs" onclick="switchTab('reqs')">REQUESTS <span id="req-count"></span></div>
-        </div>
-        <div id="list-chats" class="chat-list"></div>
-        <div id="list-reqs" class="chat-list" style="display:none;"></div>
-        <div class="fab-btn" onclick="openAddModal()"><i class="fas fa-user-plus"></i></div>
-    </div>
-
-    <div id="view-chat-room" class="view">
-        <div class="room-header">
-            <i class="fas fa-arrow-left" onclick="showView('view-chat-home')"></i>
-            <img id="room-img" class="profile-thumb">
-            <span id="room-name" style="font-weight:600;">User</span>
-        </div>
-        <div id="msg-box" class="msg-container"></div>
-        <div class="chat-input-bar">
-            <i class="fas fa-paperclip" style="color:#555; font-size:20px;" onclick="document.getElementById('img-file').click()"></i>
-            <input type="file" id="img-file" hidden accept="image/*" onchange="sendImage()">
-            <input type="text" id="msg-input" class="chat-input" placeholder="Message...">
-            <div class="send-circle" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></div>
-        </div>
-    </div>
-
-    <div id="modal-add" class="modal">
-        <div class="modal-box">
-            <h3>Add Friend</h3>
-            <input type="text" id="search-user" class="auth-input" style="border:1px solid #ddd; margin-top:15px;" placeholder="Enter Username">
-            <button class="auth-btn" style="width:auto; padding:10px 20px;" onclick="searchUser()">Search</button>
-            <button class="auth-btn" style="width:auto; background:#666;" onclick="closeModal()">Close</button>
-            
-            <div id="found-user" class="user-preview">
-                <img id="found-img" class="preview-img">
-                <div id="found-name" style="font-weight:bold; margin:5px 0;">Name</div>
-                <button class="auth-btn" onclick="sendReq()">Send Request</button>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<script>
-    // --- 1. FIRE ANIMATION SYSTEM ---
-    const canvas = document.getElementById('fire-canvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-
-    class Particle {
-        constructor() { this.reset(); }
-        reset() {
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * canvas.height;
-            this.vy = 1 + Math.random() * 3;
-            this.size = 1 + Math.random() * 2;
-            this.life = Math.random();
-            this.color = `rgba(255, ${Math.floor(Math.random()*100)}, 0,`;
-        }
-        update() {
-            this.y += this.vy; this.life -= 0.01;
-            if (this.y > canvas.height || this.life < 0) this.reset();
-        }
-        draw() {
-            ctx.fillStyle = this.color + this.life + ')';
-            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
-        }
-    }
-    for(let i=0; i<60; i++) particles.push(new Particle());
-    function animate() {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        particles.forEach(p => { p.update(); p.draw(); });
-        requestAnimationFrame(animate);
-    }
-    animate();
-
-    // --- 2. FIREBASE CONFIG ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyAwhl7FFVAeDfypJ3AO092efTzLvXgEg5U",
-        authDomain: "kinderbook-fd7a6.firebaseapp.com",
-        databaseURL: "https://kinderbook-fd7a6-default-rtdb.firebaseio.com",
-        projectId: "kinderbook-fd7a6",
-        storageBucket: "kinderbook-fd7a6.firebasestorage.app",
-        messagingSenderId: "812593237688",
-        appId: "1:812593237688:web:249a4b871b9c717b8f2e4d"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-    
-    let currentUser = null;
-    let currentChatId = null;
-    let foundUid = null;
-
-    // --- 3. NAVIGATION LOGIC ---
-    function showView(id) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
-        document.getElementById(id).classList.add('active-view');
+    let photoURL = null;
+    if (photoFile) {
+      const storageRef = ref(storage, `profiles/${Date.now()}`);
+      await uploadBytes(storageRef, photoFile);
+      photoURL = await getDownloadURL(storageRef);
     }
 
-    function goHome() { 
-        document.getElementById('erp-frame').src = ""; // Stop audio/video
-        showView('view-dashboard'); 
-    }
-
-    function openERP() {
-        const frame = document.getElementById('erp-frame');
-        frame.src = "https://entab.online/abicrs";
-        showView('view-erp');
-        // Check if iframe fails (Simple timeout fallback)
-        setTimeout(() => { document.getElementById('erp-error').style.display = 'block'; }, 3000);
-    }
-
-    function openGPortal() {
-        if(auth.currentUser) checkUserDb();
-        else showView('view-login');
-    }
-
-    // --- 4. AUTH LOGIC ---
-    function handleLogin() {
-        const e = document.getElementById('login-email').value;
-        const p = document.getElementById('login-pass').value;
-        auth.signInWithEmailAndPassword(e, p).then(checkUserDb).catch(e => alert(e.message));
-    }
-
-    function handleSignup() {
-        const e = document.getElementById('reg-email').value;
-        const p = document.getElementById('reg-pass').value;
-        auth.createUserWithEmailAndPassword(e, p).then(() => showView('view-profile')).catch(e => alert(e.message));
-    }
-
-    function checkUserDb() {
-        currentUser = auth.currentUser;
-        db.ref('users/' + currentUser.uid).once('value').then(snap => {
-            if(snap.exists()) initChat();
-            else showView('view-profile');
-        });
-    }
-
-    function logout() { auth.signOut().then(goHome); }
-
-    // --- 5. PROFILE ---
-    let profilePic = "";
-    function previewImage(input) {
-        const reader = new FileReader();
-        reader.onload = e => { profilePic = e.target.result; document.getElementById('preview-img').src = profilePic; };
-        reader.readAsDataURL(input.files[0]);
-    }
-
-    function saveProfile() {
-        const u = document.getElementById('setup-user').value.toLowerCase().trim();
-        const n = document.getElementById('setup-nick').value;
-        if(!u || !n) return alert("Fill all fields");
-
-        db.ref('usernames/'+u).once('value').then(snap => {
-            if(snap.exists()) return alert("Username taken");
-            const data = { uid: currentUser.uid, email: currentUser.email, username: u, nickname: n, photo: profilePic || "https://via.placeholder.com/100" };
-            db.ref('users/'+currentUser.uid).set(data);
-            db.ref('usernames/'+u).set(currentUser.uid);
-            initChat();
-        });
-    }
-
-    // --- 6. CHAT CORE ---
-    function initChat() {
-        showView('view-chat-home');
-        db.ref('users/'+currentUser.uid).once('value').then(s => {
-            document.getElementById('my-pic').src = s.val().photo;
-        });
-        loadChats();
-        loadReqs();
-    }
-
-    function switchTab(t) {
-        document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
-        document.getElementById('tab-'+t).classList.add('active');
-        document.getElementById('list-chats').style.display = t==='chats'?'block':'none';
-        document.getElementById('list-reqs').style.display = t==='reqs'?'block':'none';
-    }
-
-    function loadChats() {
-        db.ref('contacts/'+currentUser.uid).on('value', snap => {
-            const list = document.getElementById('list-chats');
-            list.innerHTML = "";
-            snap.forEach(doc => {
-                db.ref('users/'+doc.key).once('value').then(u => {
-                    const user = u.val();
-                    const div = document.createElement('div');
-                    div.className = 'chat-item';
-                    div.innerHTML = `<img src="${user.photo}" class="chat-avatar"><div><b>${user.nickname}</b><br><small>@${user.username}</small></div>`;
-                    div.onclick = () => openRoom(user);
-                    list.appendChild(div);
-                });
-            });
-        });
-    }
-
-    function openRoom(user) {
-        currentChatId = currentUser.uid < user.uid ? `${currentUser.uid}_${user.uid}` : `${user.uid}_${currentUser.uid}`;
-        document.getElementById('room-name').innerText = user.nickname;
-        document.getElementById('room-img').src = user.photo;
-        showView('view-chat-room');
-        
-        const box = document.getElementById('msg-box');
-        box.innerHTML = "";
-        db.ref('chats/'+currentChatId).limitToLast(50).on('child_added', s => renderMsg(s.val()));
-    }
-
-    function renderMsg(msg) {
-        const box = document.getElementById('msg-box');
-        const div = document.createElement('div');
-        const isMe = msg.sender === currentUser.uid;
-        div.className = `msg-bubble ${isMe ? 'sent' : 'received'}`;
-        
-        if(msg.type === 'img') div.innerHTML = `<img src="${msg.content}" class="msg-img">`;
-        else div.innerText = msg.content;
-        
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-    }
-
-    function sendMessage() {
-        const txt = document.getElementById('msg-input').value.trim();
-        if(!txt) return;
-        db.ref('chats/'+currentChatId).push({ sender: currentUser.uid, content: txt, type: 'text', ts: Date.now() });
-        document.getElementById('msg-input').value = "";
-    }
-
-    function sendImage() {
-        const file = document.getElementById('img-file').files[0];
-        const reader = new FileReader();
-        reader.onload = e => {
-            db.ref('chats/'+currentChatId).push({ sender: currentUser.uid, content: e.target.result, type: 'img', ts: Date.now() });
-        };
-        reader.readAsDataURL(file);
-    }
-
-    // --- 7. REQUEST SYSTEM ---
-    function openAddModal() { document.getElementById('modal-add').style.display = 'flex'; }
-    function closeModal() { document.getElementById('modal-add').style.display = 'none'; }
-
-    function searchUser() {
-        const u = document.getElementById('search-user').value.toLowerCase();
-        db.ref('usernames/'+u).once('value').then(s => {
-            if(!s.exists()) return alert("User not found");
-            foundUid = s.val();
-            db.ref('users/'+foundUid).once('value').then(us => {
-                const user = us.val();
-                document.getElementById('found-name').innerText = user.nickname;
-                document.getElementById('found-img').src = user.photo;
-                document.getElementById('found-user').style.display = 'block';
-            });
-        });
-    }
-
-    function sendReq() {
-        db.ref(`requests/${foundUid}/${currentUser.uid}`).set(true).then(() => {
-            alert("Request Sent!"); closeModal();
-        });
-    }
-
-    function loadReqs() {
-        db.ref('requests/'+currentUser.uid).on('value', snap => {
-            const list = document.getElementById('list-reqs');
-            list.innerHTML = "";
-            snap.forEach(doc => {
-                db.ref('users/'+doc.key).once('value').then(u => {
-                    const user = u.val();
-                    const div = document.createElement('div');
-                    div.className = 'chat-item';
-                    div.innerHTML = `<img src="${user.photo}" class="chat-avatar"><div><b>${user.nickname}</b><br><small>Wants to connect</small></div><button class="auth-btn" style="width:auto; margin:0 0 0 auto; padding:5px 15px;" onclick="accept('${doc.key}')">Accept</button>`;
-                    list.appendChild(div);
-                });
-            });
-        });
-    }
-
-    function accept(uid) {
-        const up = {};
-        up[`contacts/${currentUser.uid}/${uid}`] = true;
-        up[`contacts/${uid}/${currentUser.uid}`] = true;
-        up[`requests/${currentUser.uid}/${uid}`] = null;
-        db.ref().update(up);
-    }
-
-    // --- PANIC MODE (Back to Dashboard) ---
-    document.addEventListener("visibilitychange", () => {
-        if(document.hidden) goHome();
+    await addDoc(collection(db, "users"), {
+      name,
+      phone,
+      code,
+      photo: photoURL,
+      requests: [],
+      ledgers: {},
+      locked: false,
     });
 
-</script>
-</body>
-</html>
+    setName("");
+    setPhone("");
+    setPhotoFile(null);
+    setView("login");
+  };
+
+  // 🔐 Login via Code OR Phone
+  const loginUser = async () => {
+    if (!loginId) return alert("Enter Code / Phone");
+
+    const q = query(
+      collection(db, "users"),
+      where("code", "==", loginId)
+    );
+
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      setCurrentUser({ id: snap.docs[0].id, ...snap.docs[0].data() });
+      setView("app");
+      return;
+    }
+
+    const q2 = query(
+      collection(db, "users"),
+      where("phone", "==", loginId)
+    );
+
+    const snap2 = await getDocs(q2);
+
+    if (!snap2.empty) {
+      setCurrentUser({ id: snap2.docs[0].id, ...snap2.docs[0].data() });
+      setView("app");
+      return;
+    }
+
+    alert("User not found");
+  };
+
+  // 🔁 Refresh current user realtime
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsub = onSnapshot(doc(db, "users", currentUser.id), (d) => {
+      setCurrentUser({ id: d.id, ...d.data() });
+    });
+
+    return () => unsub();
+  }, [currentUser?.id]);
+
+  // 🤝 Send request via code
+  const sendRequest = async () => {
+    const target = users.find((u) => u.code === connectCode);
+    if (!target) return alert("User not found");
+
+    const targetRef = doc(db, "users", target.id);
+
+    await updateDoc(targetRef, {
+      requests: [...(target.requests || []), currentUser.code],
+    });
+
+    setConnectCode("");
+  };
+
+  // ✅ Accept request
+  const acceptRequest = async (senderCode) => {
+    const sender = users.find((u) => u.code === senderCode);
+    const ledgerId = [senderCode, currentUser.code].sort().join("_");
+
+    const currentRef = doc(db, "users", currentUser.id);
+    const senderRef = doc(db, "users", sender.id);
+
+    await updateDoc(currentRef, {
+      requests: currentUser.requests.filter((r) => r !== senderCode),
+      [`ledgers.${ledgerId}`]: { role: "viewer", entries: [] },
+    });
+
+    await updateDoc(senderRef, {
+      [`ledgers.${ledgerId}`]: { role: "editor", entries: [] },
+    });
+  };
+
+  // ➕ Add ledger entry (editor only)
+  const addEntry = async () => {
+    if (!amount || !date) return alert("Fill details");
+
+    const ledger = currentUser.ledgers[selectedLedger];
+    if (ledger.role !== "editor") return alert("Viewer cannot edit");
+
+    const entry = { amount: Number(amount), date, type: entryType };
+
+    const updates = {};
+    users.forEach((u) => {
+      if (u.ledgers?.[selectedLedger]) {
+        updates[u.id] = u;
+      }
+    });
+
+    for (let uid in updates) {
+      const refDoc = doc(db, "users", uid);
+      const entries = updates[uid].ledgers[selectedLedger].entries || [];
+
+      await updateDoc(refDoc, {
+        [`ledgers.${selectedLedger}.entries`]: [...entries, entry],
+      });
+    }
+
+    setAmount("");
+    setDate("");
+  };
+
+  const calculateBalance = (ledgerId) => {
+    const ledger = currentUser.ledgers[ledgerId];
+    if (!ledger) return 0;
+
+    return (ledger.entries || []).reduce(
+      (bal, e) => (e.type === "given" ? bal + e.amount : bal - e.amount),
+      0
+    );
+  };
+
+  // 💰 Settlement (editor only)
+  const settleLedger = async (ledgerId) => {
+    const ledger = currentUser.ledgers[ledgerId];
+    if (ledger.role !== "editor") return alert("Only editor can settle");
+
+    const balance = calculateBalance(ledgerId);
+    const entry = {
+      amount: Math.abs(balance),
+      date: new Date().toISOString().substring(0, 10),
+      type: balance > 0 ? "taken" : "given",
+      settlement: true,
+    };
+
+    const updates = {};
+    users.forEach((u) => {
+      if (u.ledgers?.[ledgerId]) updates[u.id] = u;
+    });
+
+    for (let uid in updates) {
+      const refDoc = doc(db, "users", uid);
+      const entries = updates[uid].ledgers[ledgerId].entries || [];
+
+      await updateDoc(refDoc, {
+        [`ledgers.${ledgerId}.entries`]: [...entries, entry],
+      });
+    }
+  };
+
+  // 📄 PDF Export
+  const exportPDF = async (ledgerId) => {
+    const ledger = currentUser.ledgers[ledgerId];
+    const rows = (ledger.entries || [])
+      .map((e) => `${e.date}  |  ₹ ${e.amount}  |  ${e.type}${e.settlement ? " (SETTLED)" : ""}`)
+      .join("
+");
+
+    const blob = new Blob([
+      `Ledger Statement
+
+User: ${currentUser.name}
+Ledger: ${ledgerId}
+
+${rows}
+
+Balance: ₹ ${calculateBalance(ledgerId)}`
+    ], { type: "application/pdf" });
+
+    const url = URL.createObjectURL(blob);
+    window.open(url);
+  };
+
+  // 📊 Excel Export (CSV)
+  const exportExcel = (ledgerId) => {
+    const ledger = currentUser.ledgers[ledgerId];
+    const rows = (ledger.entries || []).map((e) =>
+      `${e.date},${e.amount},${e.type}${e.settlement ? ",SETTLEMENT" : ""}`
+    );
+
+    const csvContent = "Date,Amount,Type
+" + rows.join("
+");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ledger_${ledgerId}.csv`;
+    a.click();
+  };
+
+  // 🔔 Simple Reminder Logic
+  const getReminderMessage = (ledgerId) => {
+    const balance = calculateBalance(ledgerId);
+    if (balance === 0) return "All settled ✅";
+    if (balance > 0) return `You will get ₹ ${balance}`;
+    return `You need to pay ₹ ${Math.abs(balance)}`;
+  }; = (ledgerId) => {
+    const ledger = currentUser.ledgers[ledgerId];
+    if (!ledger) return 0;
+
+    return (ledger.entries || []).reduce(
+      (bal, e) => (e.type === "given" ? bal + e.amount : bal - e.amount),
+      0
+    );
+  };
+
+  // 🖼 Profile edit (one-time lock)
+  const saveProfileEdit = async () => {
+    if (currentUser.locked) return alert("Profile locked");
+
+    let photoURL = currentUser.photo;
+
+    if (photoFile) {
+      const storageRef = ref(storage, `profiles/${Date.now()}`);
+      await uploadBytes(storageRef, photoFile);
+      photoURL = await getDownloadURL(storageRef);
+    }
+
+    const userRef = doc(db, "users", currentUser.id);
+
+    await updateDoc(userRef, {
+      name,
+      photo: photoURL,
+      locked: true,
+    });
+
+    setView("app");
+  };
+
+  // ---------------- UI ----------------
+
+  if (view === "signup") {
+    return (
+      <div className="min-h-screen bg-black text-white p-4 max-w-sm mx-auto space-y-4">
+        <h1 className="text-2xl font-bold text-center">Create Account</h1>
+
+        <Card className="bg-zinc-900">
+          <CardContent className="p-4 space-y-3">
+            <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0])} />
+            <Button className="w-full" onClick={createUser}>Signup</Button>
+            <Button variant="outline" onClick={() => setView("login")}>Back</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-black text-white p-4 max-w-sm mx-auto space-y-4">
+        <h1 className="text-2xl font-bold text-center">Khata RT</h1>
+
+        <Card className="bg-zinc-900">
+          <CardContent className="p-4 space-y-3">
+            <Input placeholder="Code OR Phone" value={loginId} onChange={(e) => setLoginId(e.target.value)} />
+            <Button className="w-full" onClick={loginUser}>Login</Button>
+            <Button variant="outline" onClick={() => setView("signup")}>Create Account</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (view === "edit") {
+    return (
+      <div className="min-h-screen bg-black text-white p-4 max-w-sm mx-auto space-y-4">
+        <h1 className="text-xl font-bold">Edit Profile</h1>
+
+        <Card className="bg-zinc-900">
+          <CardContent className="p-4 space-y-3">
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0])} />
+            <Button onClick={saveProfileEdit}>Save (One Time)</Button>
+            <Button variant="outline" onClick={() => setView("app")}>Cancel</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white p-4 max-w-sm mx-auto space-y-3">
+      <div className="flex justify-between">
+        <div className="flex gap-2 items-center">
+          {currentUser.photo && (
+            <img src={currentUser.photo} className="w-10 h-10 rounded-full" />
+          )}
+          <div>
+            <h1 className="font-bold">{currentUser.name}</h1>
+            <p className="text-xs text-zinc-400">{currentUser.code}</p>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => {
+          setName(currentUser.name);
+          setView("edit");
+        }}>Edit</Button>
+      </div>
+
+      <Card className="bg-zinc-900">
+        <CardContent className="p-3 flex gap-2">
+          <Input placeholder="Enter user code" value={connectCode} onChange={(e) => setConnectCode(e.target.value)} />
+          <Button onClick={sendRequest}>Add</Button>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-zinc-900">
+        <CardContent className="p-3">
+          <h2 className="font-semibold">Accounts</h2>
+          <div className="space-y-2 mt-2">
+            {Object.keys(currentUser.ledgers || {}).map((ledgerId) => (
+              <Button key={ledgerId} variant="outline" className="w-full justify-between" onClick={() => setSelectedLedger(ledgerId)}>
+                <span>{ledgerId}</span>
+                <span>₹ {calculateBalance(ledgerId)}</span>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {selectedLedger && (
+        <Card className="bg-zinc-900">
+          <CardContent className="p-3 space-y-2">
+            <h2 className="font-semibold">Ledger</h2>
+
+            {currentUser.ledgers[selectedLedger].role === "editor" && (
+              <>
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <select className="bg-black border border-zinc-700 rounded-xl p-2" value={entryType} onChange={(e) => setEntryType(e.target.value)}>
+                  <option value="given">Given</option>
+                  <option value="taken">Taken</option>
+                </select>
+                <Button onClick={addEntry}>Add Entry</Button>
+              </>
+            )}
+
+            {(currentUser.ledgers[selectedLedger].entries || []).map((e, i) => (
+              <div key={i} className="flex justify-between text-sm border-b border-zinc-800 pb-1">
+                <span>{e.date}</span>
+                <span>₹ {e.amount}</span>
+                <span className={e.type === "given" ? "text-green-400" : "text-red-400"}>{e.type}</span>
+              </div>
+            ))}
+
+            <div className="text-right font-bold">Balance ₹ {calculateBalance(selectedLedger)}</div>
+
+            <div className="text-xs text-zinc-400 text-right">
+              {getReminderMessage(selectedLedger)}
+            </div>
+
+            {currentUser.ledgers[selectedLedger].role === "editor" && (
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                <Button variant="outline" onClick={() => settleLedger(selectedLedger)}>Settle</Button>
+                <Button variant="outline" onClick={() => exportPDF(selectedLedger)}>PDF</Button>
+                <Button variant="outline" onClick={() => exportExcel(selectedLedger)}>Excel</Button>
+              </div>
+            )} ₹ {calculateBalance(selectedLedger)}</div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
